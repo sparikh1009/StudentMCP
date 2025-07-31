@@ -1,26 +1,24 @@
-FROM node:22.12-alpine AS builder
+# Base image
+FROM node:20
 
-COPY student /app
-COPY tsconfig.json /tsconfig.json
-
+# Set working directory
 WORKDIR /app
 
-RUN --mount=type=cache,target=/root/.npm npm install
+# Copy everything
+COPY . .
 
-RUN --mount=type=cache,target=/root/.npm-production npm ci --ignore-scripts --omit-dev
+# Install all dependencies
+RUN npm install
 
-FROM node:22-alpine AS release
+# Build TypeScript → dist
+RUN npm run build
 
-COPY --from=builder /app/dist /app/dist
-COPY --from=builder /app/package.json /app/package.json
-COPY --from=builder /app/package-lock.json /app/package-lock.json
-COPY --from=builder /app/memory.json /app/memory.json
-
+# Set runtime env vars (if needed)
 ENV NODE_ENV=production
 ENV MEMORY_FILE_PATH=/app/memory.json
 
-WORKDIR /app
+# Expose the default port
+EXPOSE 3000
 
-RUN npm ci --ignore-scripts --omit-dev
-
-ENTRYPOINT ["node", "dist/student_index.js"] 
+# Start the server
+CMD ["npm", "start"]
